@@ -6,7 +6,8 @@ yay -S --noconfirm --needed \
   nautilus sushi ffmpegthumbnailer \
   slurp satty \
   mpv evince imv \
-  chromium
+  mesa lib32-mesa \
+  google-chrome
 
 # Add screen recorder based on GPU
 if lspci | grep -qi 'nvidia'; then
