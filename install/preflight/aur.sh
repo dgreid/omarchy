@@ -14,6 +14,9 @@ if [[ "$(uname -m)" == "x86_64" ]] && ! command -v yay &>/dev/null; then
       echo -e '\n[chaotic-aur]\nInclude = /etc/pacman.d/chaotic-mirrorlist' | sudo tee -a /etc/pacman.conf >/dev/null
     fi
 
+    # Add multilib support for steam:
+    echo -e '\n[multilib]\nInclude = /etc/pacman.d/mirrorlist' | sudo tee -a /etc/pacman.conf >/dev/null
+
     # Install yay directly from Chaotic-AUR
     sudo pacman -Sy --needed --noconfirm yay
   else
