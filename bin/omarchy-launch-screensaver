@@ -6,7 +6,7 @@ if ! command -v tte &>/dev/null; then
 fi
 
 # Exit early if screensave is already running
-pgrep -f "alacritty --class Screensaver" && exit 0
+pgrep -f "org.omarchy.Screensaver" && exit 0
 
 # Allow screensaver to be turned off but also force started
 if [[ -f ~/.local/state/omarchy/toggles/screensaver-off ]] && [[ $1 != "force" ]]; then
@@ -20,7 +20,7 @@ for m in $(hyprctl monitors -j | jq -r '.[] | .name'); do
 
   # FIXME: Find a way to make this generic where we it can work for kitty + ghostty
   hyprctl dispatch exec -- \
-    alacritty --class Screensaver \
+    alacritty --class org.omarchy.Screensaver \
     --config-file ~/.local/share/omarchy/default/alacritty/screensaver.toml \
     -e omarchy-cmd-screensaver
 done
