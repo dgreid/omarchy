@@ -1,3 +1,3 @@
 #!/bin/bash
 
-exec setsid uwsm-app -- alacritty --class=org.omarchy.FloatTerminal -o font.size=9 -e bash -c 'fastfetch; read -n 1 -s'
+exec setsid uwsm-app -- $TERMINAL --class=org.omarchy.FloatTerminal $STATUS_FONT_SIZE -e bash -c 'fastfetch; read -n 1 -s'

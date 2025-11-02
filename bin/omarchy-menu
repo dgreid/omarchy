@@ -37,7 +37,7 @@ menu() {
 }
 
 terminal() {
-  alacritty --class=org.omarchy.FloatTerminal -e "$@"
+  $TERMINAL --class=org.omarchy.FloatTerminal -e "$@"
 }
 
 present_terminal() {

@@ -2,6 +2,21 @@
 
 # Install other terminals via Install > Terminal
 export TERMINAL=alacritty
+# Each terminal has a different method for overriding font size.
+case "$TERMINAL" in
+  alacritty)
+    export STATUS_FONT_SIZE="-o font.size=9"
+    ;;
+  kitty)
+    export STATUS_FONT_SIZE="-o font_size=9"
+    ;;
+  ghostty)
+    export STATUS_FONT_SIZE="--font-size=9"
+    ;;
+  *)
+    export STATUS_FONT_SIZE=""
+    ;;
+esac
 
 # Use code for VSCode
 export EDITOR=nvim
