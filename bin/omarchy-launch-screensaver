@@ -5,6 +5,22 @@ if ! command -v tte &>/dev/null; then
   exit 1
 fi
 
+# Each terminal has a different method passing a config file
+case "$TERMINAL" in
+  alacritty)
+    export TERM_SS_CONFIG="--class org.omarchy.Screensaver --config-file ~/.local/share/omarchy/default/alacritty/screensaver.toml"
+    ;;
+  kitty)
+    export TERM_SS_CONFIG="--class=org.omarchy.Screensaver --config=~/.local/share/omarchy/default/kitty/screensaver.config"
+    ;;
+  ghostty)
+    export TERM_SS_CONFIG="--class=org.omarchy.Screensaver --config-file=~/.local/share/omarchy/default/ghostty/screensaver.config"
+    ;;
+  *)
+    exit 1
+    ;;
+esac
+
 # Exit early if screensave is already running
 pgrep -f "org.omarchy.Screensaver" && exit 0
 
@@ -18,10 +34,8 @@ focused=$(hyprctl monitors -j | jq -r '.[] | select(.focused == true).name')
 for m in $(hyprctl monitors -j | jq -r '.[] | .name'); do
   hyprctl dispatch focusmonitor $m
 
-  # FIXME: Find a way to make this generic where we it can work for kitty + ghostty
   hyprctl dispatch exec -- \
-    alacritty --class org.omarchy.Screensaver \
-    --config-file ~/.local/share/omarchy/default/alacritty/screensaver.toml \
+    $TERMINAL $TERM_SS_CONFIG \
     -e omarchy-cmd-screensaver
 done
 
