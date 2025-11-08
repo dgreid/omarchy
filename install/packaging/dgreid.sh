@@ -1,3 +1,6 @@
 # Install all base packages
 mapfile -t packages < <(grep -v '^#' "$OMARCHY_INSTALL/omarchy-dgreid.packages" | grep -v '^$')
 sudo pacman -S --noconfirm --needed "${packages[@]}"
+
+mapfile -t packages < <(grep -v '^#' "$OMARCHY_INSTALL/omarchy-dgreid-yum.packages" | grep -v '^$')
+sudo yay -S --noconfifm --ignore  "${packages[@]}"
