@@ -6,7 +6,7 @@ omarchy-webapp-install "Google Contacts" https://contacts.google.com/ "Google Co
 omarchy-webapp-install "Google Messages" https://messages.google.com/web/conversations "Google Messages.png" "omarchy-launch-webapp-chrome https://messages.google.com/web/conversations"
 omarchy-webapp-install "Google Maps" https://maps.google.com "Google Maps.png" "omarchy-launch-webapp-chrome https://maps.google.com"
 omarchy-webapp-install "ChatGPT" https://chatgpt.com/ ChatGPT.png
-omarchy-webapp-install "YouTube" https://youtube.com/ YouTube.png
+omarchy-webapp-install "YouTube" https://youtube.com/ YouTube.png "omarchy-launch-webapp-chrome https://youtube.com"
 omarchy-webapp-install "GitHub" https://github.com/ GitHub.png
 omarchy-webapp-install "X" https://x.com/ X.png
 omarchy-webapp-install "Figma" https://figma.com/ Figma.png
