@@ -1,10 +1,10 @@
 omarchy-webapp-install "HEY" https://app.hey.com HEY.png "omarchy-webapp-handler-hey %u" "x-scheme-handler/mailto"
 omarchy-webapp-install "Basecamp" https://launchpad.37signals.com Basecamp.png
 omarchy-webapp-install "WhatsApp" https://web.whatsapp.com/ WhatsApp.png
-omarchy-webapp-install "Google Photos" https://photos.google.com/ "Google Photos.png"
+omarchy-webapp-install "Google Photos" https://photos.google.com/ "Google Photos.png" "omarchy-launch-webapp-chrome https://photos.google.com"
 omarchy-webapp-install "Google Contacts" https://contacts.google.com/ "Google Contacts.png"
-omarchy-webapp-install "Google Messages" https://messages.google.com/web/conversations "Google Messages.png"
-omarchy-webapp-install "Google Maps" https://maps.google.com "Google Maps.png"
+omarchy-webapp-install "Google Messages" https://messages.google.com/web/conversations "Google Messages.png" "omarchy-launch-webapp-chrome https://messages.google.com/web/conversations"
+omarchy-webapp-install "Google Maps" https://maps.google.com "Google Maps.png" "omarchy-launch-webapp-chrome https://maps.google.com"
 omarchy-webapp-install "ChatGPT" https://chatgpt.com/ ChatGPT.png
 omarchy-webapp-install "YouTube" https://youtube.com/ YouTube.png
 omarchy-webapp-install "GitHub" https://github.com/ GitHub.png
