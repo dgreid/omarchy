@@ -1,4 +1,5 @@
 # list of packages for dgreid
 
+tigervnc
 tmux
 qemu-full
