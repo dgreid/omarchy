@@ -1,0 +1,9 @@
+#!/bin/bash
+
+# omarchy:summary=Assert output mute (no-op if already muted). Flashes the OSD on the unmute->mute transition.
+
+status=$(wpctl get-volume @DEFAULT_AUDIO_SINK@)
+
+if [[ $status != *MUTED* ]]; then
+  exec omarchy-swayosd-client --output-volume mute-toggle
+fi

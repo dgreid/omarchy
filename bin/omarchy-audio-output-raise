@@ -1,0 +1,17 @@
+#!/bin/bash
+
+# omarchy:summary=Raise output volume; if currently muted with non-zero level, unmute on first press instead of changing volume.
+
+status=$(wpctl get-volume @DEFAULT_AUDIO_SINK@)
+vol=$(echo "$status" | awk '{print $2}')
+
+if [[ $status == *MUTED* ]]; then
+  if [[ $vol == "0.00" ]]; then
+    wpctl set-mute @DEFAULT_AUDIO_SINK@ 0
+    exec omarchy-swayosd-client --output-volume raise
+  else
+    exec omarchy-swayosd-client --output-volume mute-toggle
+  fi
+else
+  exec omarchy-swayosd-client --output-volume raise
+fi
