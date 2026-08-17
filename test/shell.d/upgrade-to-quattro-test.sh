@@ -13,6 +13,33 @@ pacman_line=$(grep -n '^configure_pacman_channel$' "$upgrade_to_quattro" | cut -
 grep -F 'omarchy-snapshot create || (($? == 127))' "$upgrade_to_quattro" >/dev/null
 pass "Omarchy 4 upgrade snapshots the system before mutation"
 
+grep -F -- '--repo' "$upgrade_to_quattro" >/dev/null ||
+  fail "Omarchy 4 upgrade accepts --repo"
+grep -F -- '--branch' "$upgrade_to_quattro" >/dev/null ||
+  fail "Omarchy 4 upgrade accepts --branch"
+if grep -F -- '--checkout' "$upgrade_to_quattro" >/dev/null; then
+  fail "Omarchy 4 upgrade does not take a --checkout path"
+fi
+grep -F 'target_home/omarchy' "$upgrade_to_quattro" >/dev/null ||
+  fail "Omarchy 4 upgrade uses ~/omarchy as the live checkout"
+grep -F 'OMARCHY_REPO' "$upgrade_to_quattro" >/dev/null ||
+  fail "Omarchy 4 upgrade honors OMARCHY_REPO"
+grep -F 'link_upgrade_source' "$upgrade_to_quattro" >/dev/null ||
+  fail "Omarchy 4 upgrade links ~/omarchy after packages land"
+pass "Omarchy 4 upgrade can clone a GitHub repo/branch into ~/omarchy"
+
+repo_err=$("$upgrade_to_quattro" --repo dgreid/omarchy 2>&1) &&
+  fail "Omarchy 4 upgrade rejects --repo without --branch"
+grep -Fq -- '--repo needs --branch' <<<"$repo_err" ||
+  fail "Omarchy 4 upgrade tells the user --repo needs --branch" "$repo_err"
+pass "Omarchy 4 upgrade rejects --repo without --branch"
+
+branch_err=$("$upgrade_to_quattro" --branch dgreid-quattro 2>&1) &&
+  fail "Omarchy 4 upgrade rejects --branch without --repo"
+grep -Fq -- '--branch needs --repo' <<<"$branch_err" ||
+  fail "Omarchy 4 upgrade tells the user --branch needs --repo" "$branch_err"
+pass "Omarchy 4 upgrade rejects --branch without --repo"
+
 # The mirrors are repointed immediately before the keyrings go in, so only a
 # forced refresh replaces the legacy database and its stale checksums.
 grep -F 'pacman -Syy --noconfirm archlinux-keyring omarchy-keyring' "$upgrade_to_quattro" >/dev/null

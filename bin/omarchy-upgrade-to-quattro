@@ -1,19 +1,29 @@
 #!/bin/bash
 
 # omarchy:summary=Upgrade a legacy Omarchy install to the package-backed Omarchy quattro layout.
-# omarchy:args=[--yes] [--reboot] [--dev] [--channel stable|rc|edge] [--user USER]
-# omarchy:examples=omarchy upgrade to quattro | omarchy upgrade to quattro --dev
+# omarchy:args=[--yes] [--reboot] [--dev] [--channel stable|rc|edge] [--user USER] [--repo OWNER/NAME] [--branch BRANCH]
+# omarchy:examples=omarchy upgrade to quattro | omarchy upgrade to quattro --repo dgreid/omarchy --branch dgreid-quattro
 # omarchy:requires-sudo=true
 
 set -euo pipefail
 
 usage() {
   cat <<'USAGE'
-Usage: omarchy-upgrade-to-quattro [--yes] [--reboot] [--dev] [--channel stable|rc|edge] [--user USER]
+Usage: omarchy-upgrade-to-quattro [--yes] [--reboot] [--dev] [--channel stable|rc|edge] [--user USER] [--repo OWNER/NAME] [--branch BRANCH]
 
 Upgrade any pre-quattro Omarchy install to the package-backed Omarchy quattro layout.
 This script is intentionally self-contained so it can be shipped as a command
 in Omarchy 3.8.x or run directly with curl | bash on older systems.
+
+Packages (Hyprland, /etc, systemd) still come from the quattro channel.
+--repo / --branch are the 3.x OMARCHY_REPO / OMARCHY_REF install target:
+clone that GitHub tree to ~/omarchy (or retarget ~/omarchy if it already
+exists), point OMARCHY_PATH at it, and refresh user configs from it.
+Later `omarchy update` git-pulls that branch.
+
+If ~/omarchy already exists and looks like an Omarchy checkout, it is
+used as-is even without --repo/--branch, so pointing its origin at
+dgreid/omarchy and checking out dgreid-quattro is enough.
 
 Options:
   -y, --yes                 Do not prompt before upgrading
@@ -21,6 +31,8 @@ Options:
   --dev                     Use dev packages [omarchy-dev / omarchy-settings-dev] (uses edge channel)
   --channel stable|rc|edge  Override the default stable Omarchy package channel
   --user USER               User account to refresh after package install
+  --repo OWNER/NAME         GitHub repo to clone (or a full git URL). Also OMARCHY_REPO
+  --branch BRANCH           Branch or tag in that repo. Also OMARCHY_REF
   -h, --help                Show this help
 USAGE
 }
@@ -75,6 +87,8 @@ yes=0
 auto_reboot=0
 boot_cmdline_unsafe=0
 use_dev_packages=${OMARCHY_UPGRADE_DEV:-0}
+repo="${OMARCHY_REPO:-}"
+ref="${OMARCHY_REF:-}"
 
 while (($#)); do
   case "$1" in
@@ -97,6 +111,16 @@ while (($#)); do
       ;;
     --user)
       target_user="${2:-}"
+      shift 2
+      ;;
+    --repo)
+      [[ -n ${2:-} && $2 != -* ]] || fail "--repo requires OWNER/NAME or a git URL"
+      repo="$2"
+      shift 2
+      ;;
+    --branch)
+      [[ -n ${2:-} && $2 != -* ]] || fail "--branch requires a branch or tag"
+      ref="$2"
       shift 2
       ;;
     -h|--help)
@@ -145,6 +169,13 @@ fi
 
 if { [[ -n $channel_override ]] || (( channel_override_cli )); } && ! valid_channel "$channel_override"; then
   fail "Invalid channel '$channel_override'. Use stable, rc, or edge."
+fi
+
+if [[ -n $repo && -z $ref ]]; then
+  fail "--repo needs --branch (3.x OMARCHY_REF). Example: --repo dgreid/omarchy --branch dgreid-quattro"
+fi
+if [[ -n $ref && -z $repo ]]; then
+  fail "--branch needs --repo (3.x OMARCHY_REPO). Example: --repo dgreid/omarchy --branch dgreid-quattro"
 fi
 
 if ! command -v pacman >/dev/null 2>&1; then
@@ -2255,6 +2286,99 @@ EOF
 THEME_COMPAT
 }
 
+repo_clone_url() {
+  case "$repo" in
+    *://*|git@*|ssh://*)
+      printf '%s\n' "$repo"
+      ;;
+    *)
+      printf 'https://github.com/%s.git\n' "$repo"
+      ;;
+  esac
+}
+
+omarchy_checkout_ok() {
+  local tree="$1" required
+  [[ -d $tree/.git ]] || return 1
+  for required in bin default config; do
+    [[ -d $tree/$required ]] || return 1
+  done
+  return 0
+}
+
+# Sets source_tree to ~/omarchy when that checkout should be the live tree.
+prepare_upgrade_source() {
+  local dest="$target_home/omarchy"
+  local url
+  source_tree=""
+
+  if [[ -n $repo ]]; then
+    url=$(repo_clone_url)
+    log "Using Omarchy source $url ($ref) at $dest"
+    if [[ -d $dest/.git ]]; then
+      run_as_user git -C "$dest" remote set-url origin "$url"
+      run_as_user git -C "$dest" fetch --prune origin
+      if ! run_as_user git -C "$dest" checkout "$ref"; then
+        fail "Could not check out $ref in $dest"
+      fi
+      run_as_user git -C "$dest" reset --hard "origin/$ref" ||
+        run_as_user git -C "$dest" reset --hard "$ref"
+    elif [[ -e $dest ]]; then
+      fail "$dest exists and is not a git checkout"
+    else
+      run_as_user git clone --branch "$ref" "$url" "$dest" ||
+        fail "Could not clone $url branch $ref"
+    fi
+  elif omarchy_checkout_ok "$dest"; then
+    log "Using existing Omarchy checkout $dest"
+    if run_as_user git -C "$dest" rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' >/dev/null 2>&1; then
+      run_as_user git -C "$dest" pull --ff-only ||
+        warn "Could not fast-forward $dest; using the checkout as-is."
+    fi
+  else
+    return 0
+  fi
+
+  omarchy_checkout_ok "$dest" || fail "$dest does not look like an Omarchy checkout."
+  source_tree=$dest
+}
+
+link_upgrade_source() {
+  local source_tree=""
+  prepare_upgrade_source
+  [[ -n $source_tree ]] || return 0
+
+  local linker=/usr/share/omarchy/bin/omarchy-dev-link
+  [[ -x $linker ]] || linker="$source_tree/bin/omarchy-dev-link"
+  [[ -x $linker ]] || fail "omarchy-dev-link not found; cannot point OMARCHY_PATH at $source_tree"
+
+  log "Pointing OMARCHY_PATH at $source_tree for the first Quattro session"
+  if ! run_as_user "$linker" "$source_tree" --no-reboot; then
+    fail "Could not omarchy-dev-link $source_tree"
+  fi
+
+  log "Refreshing user configs from $source_tree"
+  if ! run_as_user env \
+    HOME="$target_home" \
+    USER="$target_user" \
+    LOGNAME="$target_user" \
+    OMARCHY_PATH="$source_tree" \
+    PATH="$source_tree/bin:$package_path" \
+    bash -euo pipefail -c '
+      omarchy-refresh-hyprland
+      omarchy-refresh-applications
+      omarchy-refresh-config ghostty/config
+      if [[ -f $OMARCHY_PATH/install/user/dgreid.sh ]]; then
+        OMARCHY_INSTALL="$OMARCHY_PATH/install"
+        export OMARCHY_INSTALL
+        # shellcheck disable=SC1091
+        source "$OMARCHY_PATH/install/user/dgreid.sh"
+      fi
+    '; then
+    warn "Could not refresh configs from $source_tree; run omarchy refresh hyprland after reboot."
+  fi
+}
+
 refresh_current_theme_after_upgrade() {
   local theme_name runtime_dir
 
@@ -2351,6 +2475,7 @@ refresh_current_theme_after_upgrade
 restore_hyprland_config_reload
 
 upgrade_completed=1
+link_upgrade_source
 
 cat <<EOF
 
