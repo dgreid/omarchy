@@ -1,13 +1,62 @@
 #!/bin/bash
 
-# omarchy:summary=Launch a URL as a web app in the default supported browser
-# omarchy:args=<url>
+# omarchy:summary=Launch a URL as a web app in a supported browser
+# omarchy:args=[--browser chrome|brave|<desktop>] <url>
+# omarchy:examples=omarchy launch webapp https://omarchy.org | omarchy launch webapp --browser chrome https://gmail.google.com
 
-browser=$(xdg-settings get default-web-browser)
+requested_browser=""
 
-case $browser in
-google-chrome* | brave* | microsoft-edge* | opera* | vivaldi* | helium*) ;;
-*) browser="chromium.desktop" ;;
-esac
+if [[ ${1:-} == "--browser" ]]; then
+  if (($# < 3)); then
+    echo "Usage: omarchy-launch-webapp [--browser chrome|brave|<desktop>] <url>" >&2
+    exit 1
+  fi
+  requested_browser="$2"
+  shift 2
+fi
+
+if (($# < 1)); then
+  echo "Usage: omarchy-launch-webapp [--browser chrome|brave|<desktop>] <url>" >&2
+  exit 1
+fi
+
+browser_desktop() {
+  local candidate
+  for candidate in "$@"; do
+    if [[ -f $HOME/.local/share/applications/$candidate ||
+          -f $HOME/.nix-profile/share/applications/$candidate ||
+          -f /usr/share/applications/$candidate ]]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+  return 1
+}
+
+browser=""
+if [[ -n $requested_browser ]]; then
+  case $requested_browser in
+    chrome|google-chrome)
+      browser=$(browser_desktop google-chrome.desktop google-chrome-stable.desktop) || true
+      ;;
+    brave)
+      browser=$(browser_desktop brave-browser.desktop brave.desktop) || true
+      ;;
+    *.desktop)
+      browser=$(browser_desktop "$requested_browser") || true
+      ;;
+    *)
+      browser=$(browser_desktop "${requested_browser}.desktop") || true
+      ;;
+  esac
+fi
+
+if [[ -z $browser ]]; then
+  browser=$(xdg-settings get default-web-browser)
+  case $browser in
+  google-chrome* | brave* | microsoft-edge* | opera* | vivaldi* | helium*) ;;
+  *) browser="chromium.desktop" ;;
+  esac
+fi
 
 exec setsid uwsm-app -- $(sed -n 's/^Exec=\([^ ]*\).*/\1/p' {~/.local,~/.nix-profile,/usr}/share/applications/$browser 2>/dev/null | head -1) --app="$1" "${@:2}"

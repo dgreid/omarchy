@@ -74,3 +74,8 @@ t2fanrd
 
 # Framework 16
 qmk-hid
+
+# dgreid extras (ISO cache + pacstrap)
+qemu-full
+tigervnc
+podman

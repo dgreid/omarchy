@@ -1,0 +1,6 @@
+# Extra official-repo packages for the dgreid profile.
+# tmux is already in omarchy-base.packages.
+
+qemu-full
+tigervnc
+podman

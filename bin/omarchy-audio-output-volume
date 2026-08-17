@@ -1,13 +1,13 @@
 #!/bin/bash
 
 # omarchy:summary=Adjust output volume and show the Omarchy OSD
-# omarchy:args=<raise|lower|mute-toggle|+N|-N>
-# omarchy:examples=omarchy audio output volume raise | omarchy audio output volume lower | omarchy audio output volume mute-toggle | omarchy audio output volume +1
+# omarchy:args=<raise|lower|mute|mute-toggle|raise-or-unmute|+N|-N>
+# omarchy:examples=omarchy audio output volume raise | omarchy audio output volume mute | omarchy audio output volume raise-or-unmute
 
 action="${1:-}"
 
 if [[ -z $action ]]; then
-  echo "Usage: omarchy-audio-output-volume <raise|lower|mute-toggle|+N|-N>"
+  echo "Usage: omarchy-audio-output-volume <raise|lower|mute|mute-toggle|raise-or-unmute|+N|-N>"
   exit 1
 fi
 
@@ -39,7 +39,13 @@ case "$action" in
   lower) action="-5" ;;
 esac
 
-if [[ $action == "mute-toggle" ]]; then
+if [[ $action == "mute" ]]; then
+  # Assert mute. Toggle-on-press is unpredictable when you can't see the OSD:
+  # intending to silence and accidentally un-silencing is loud and obvious.
+  if ! volume_muted; then
+    pactl set-sink-mute "$sink" 1
+  fi
+elif [[ $action == "mute-toggle" ]]; then
   runtime_dir="${XDG_RUNTIME_DIR:-/tmp}"
   debounce_file="$runtime_dir/omarchy-audio-output-volume-mute-toggle.last"
   now=$(date +%s%3N)
@@ -51,6 +57,23 @@ if [[ $action == "mute-toggle" ]]; then
   printf '%s\n' "$now" >"$debounce_file"
 
   pactl set-sink-mute "$sink" toggle
+elif [[ $action == "raise-or-unmute" ]]; then
+  current="$(volume_percent)"
+  if [[ -z $current ]]; then
+    echo "Could not read volume for $sink." >&2
+    exit 1
+  fi
+
+  # First press unmutes a non-zero muted sink without bumping the level.
+  # Muted at 0.00 unmutes and raises so "unmuted" is never silent.
+  if volume_muted && ((current > 0)); then
+    pactl set-sink-mute "$sink" 0
+  else
+    next=$((current + 5))
+    ((next <= 100)) || next=100
+    pactl set-sink-mute "$sink" 0
+    pactl set-sink-volume "$sink" "${next}%"
+  fi
 elif [[ $action =~ ^([+-])([0-9]+)$ ]]; then
   direction="${BASH_REMATCH[1]}"
   step="${BASH_REMATCH[2]}"
